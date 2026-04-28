@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import chalk from "chalk";
+import { AppError } from "./lib/errors.js";
 
 const program = new Command();
 
@@ -20,15 +22,17 @@ program
 program
   .command("logout")
   .description("Clear stored credentials and invalidate session")
-  .action(() => {
-    console.log("logout: not implemented yet");
+  .action(async () => {
+    const { logoutCommand } = await import("./commands/logout.js");
+    await logoutCommand();
   });
 
 program
   .command("whoami")
   .description("Display the currently authenticated user")
-  .action(() => {
-    console.log("whoami: not implemented yet");
+  .action(async () => {
+    const { whoamiCommand } = await import("./commands/whoami.js");
+    await whoamiCommand();
   });
 
 const profiles = program.command("profiles").description("Manage profiles");
@@ -70,6 +74,17 @@ profiles
   });
 
 program.parseAsync(process.argv).catch((err: unknown) => {
-  console.error(err);
+  if (err instanceof AppError) {
+    console.error(chalk.red("✖"), err.userMessage);
+    process.exit(err.exitCode);
+  }
+  console.error(chalk.red("✖"), "An unexpected error occurred.");
+  if (process.env.INSIGHTA_DEBUG) {
+    console.error(err);
+  } else {
+    console.error(
+      chalk.gray("  Run with INSIGHTA_DEBUG=1 to see the full stack trace."),
+    );
+  }
   process.exit(1);
 });
