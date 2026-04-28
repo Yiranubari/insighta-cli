@@ -37,3 +37,4 @@ coverage/
 credentials.json
 
 .insighta/
+profiles_*.csv
