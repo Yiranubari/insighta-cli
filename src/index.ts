@@ -3,6 +3,10 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import { AppError } from "./lib/errors.js";
+import type { ListOptions } from "./commands/profiles/list.js";
+import type { SearchOptions } from "./commands/profiles/search.js";
+import type { CreateOptions } from "./commands/profiles/create.js";
+import type { ExportOptions } from "./commands/profiles/export.js";
 
 const program = new Command();
 
@@ -40,37 +44,69 @@ const profiles = program.command("profiles").description("Manage profiles");
 profiles
   .command("list")
   .description("List profiles with optional filters and pagination")
-  .action(() => {
-    console.log("profiles list: not implemented yet");
+  .option("--gender <gender>", "Filter by gender (male|female)")
+  .option("--country <code>", "Filter by 2-letter country code (e.g. NG)")
+  .option(
+    "--age-group <group>",
+    "Filter by age group (child|teen|adult|senior)",
+  )
+  .option("--min-age <years>", "Minimum age (inclusive)")
+  .option("--max-age <years>", "Maximum age (inclusive)")
+  .option("--sort-by <field>", "Sort field (age|created_at|gender_probability)")
+  .option("--order <direction>", "Sort direction (asc|desc)")
+  .option("--page <n>", "Page number")
+  .option("--limit <n>", "Results per page (max 100)")
+  .option("--full-ids", "Show full UUIDs instead of truncated")
+  .action(async (opts: ListOptions) => {
+    const { listCommand } = await import("./commands/profiles/list.js");
+    await listCommand(opts);
   });
 
 profiles
   .command("get <id>")
   .description("Get a single profile by ID")
-  .action((id: string) => {
-    console.log(`profiles get ${id}: not implemented yet`);
+  .action(async (id: string) => {
+    const { getCommand } = await import("./commands/profiles/get.js");
+    await getCommand(id);
   });
 
 profiles
   .command("search <query>")
   .description("Natural language search over profiles")
-  .action((query: string) => {
-    console.log(`profiles search "${query}": not implemented yet`);
+  .option("--page <n>", "Page number")
+  .option("--limit <n>", "Results per page (max 100)")
+  .option("--full-ids", "Show full UUIDs instead of truncated")
+  .action(async (query: string, opts: SearchOptions) => {
+    const { searchCommand } = await import("./commands/profiles/search.js");
+    await searchCommand(query, opts);
   });
 
 profiles
   .command("create")
   .description("Create a new profile (admin only)")
   .requiredOption("--name <name>", "Name to enrich and store")
-  .action((opts: { name: string }) => {
-    console.log(`profiles create --name "${opts.name}": not implemented yet`);
+  .action(async (opts: CreateOptions) => {
+    const { createCommand } = await import("./commands/profiles/create.js");
+    await createCommand(opts);
   });
 
 profiles
   .command("export")
   .description("Export profiles to CSV")
-  .action(() => {
-    console.log("profiles export: not implemented yet");
+  .option("--format <format>", "Export format (csv)", "csv")
+  .option("--gender <gender>", "Filter by gender (male|female)")
+  .option("--country <code>", "Filter by 2-letter country code (e.g. NG)")
+  .option(
+    "--age-group <group>",
+    "Filter by age group (child|teenager|adult|senior)",
+  )
+  .option("--min-age <years>", "Minimum age (inclusive)")
+  .option("--max-age <years>", "Maximum age (inclusive)")
+  .option("--sort-by <field>", "Sort field (age|created_at|gender_probability)")
+  .option("--order <direction>", "Sort direction (asc|desc)")
+  .action(async (opts: ExportOptions) => {
+    const { exportCommand } = await import("./commands/profiles/export.js");
+    await exportCommand(opts);
   });
 
 program.parseAsync(process.argv).catch((err: unknown) => {
