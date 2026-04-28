@@ -9,8 +9,7 @@ import type { AddressInfo } from "node:net";
 import open from "open";
 
 import { API_URL } from "./config.js";
-import { ConfigError } from "./errors.js";
-
+import { ConfigError, OAuthStateMismatchError } from "./errors.js";
 function generateCodeVerifier(): string {
   return base64UrlEncode(randomBytes(32));
 }
@@ -27,8 +26,13 @@ function base64UrlEncode(buf: Buffer): string {
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 }
+
+function generateState(): string {
+  return base64UrlEncode(randomBytes(32));
+}
 interface CallbackResult {
   auth_code: string;
+  state: string;
 }
 
 async function awaitCallback(): Promise<{
@@ -57,6 +61,7 @@ async function awaitCallback(): Promise<{
       }
 
       const authCode = url.searchParams.get("auth_code");
+      const stateParam = url.searchParams.get("state");
       const errorParam = url.searchParams.get("error");
 
       if (errorParam) {
@@ -98,7 +103,7 @@ async function awaitCallback(): Promise<{
         ),
         "text/html",
       );
-      resolveResult({ auth_code: authCode });
+      resolveResult({ auth_code: authCode, state: stateParam ?? "" });
       server.close();
     },
   );
@@ -150,6 +155,7 @@ export interface OAuthFlowResult {
 export async function performOAuthFlow(): Promise<OAuthFlowResult> {
   const code_verifier = generateCodeVerifier();
   const code_challenge = deriveCodeChallenge(code_verifier);
+  const cli_state = generateState();
 
   const { port, result } = await awaitCallback();
 
@@ -157,9 +163,15 @@ export async function performOAuthFlow(): Promise<OAuthFlowResult> {
   authUrl.searchParams.set("client_type", "cli");
   authUrl.searchParams.set("code_challenge", code_challenge);
   authUrl.searchParams.set("cli_port", String(port));
+  authUrl.searchParams.set("cli_state", cli_state);
 
   await open(authUrl.toString());
 
-  const { auth_code } = await result;
+  const { auth_code, state } = await result;
+
+  if (state !== cli_state) {
+    throw new OAuthStateMismatchError();
+  }
+
   return { auth_code, code_verifier };
 }
