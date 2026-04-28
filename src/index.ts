@@ -12,8 +12,9 @@ program
 program
   .command("login")
   .description("Authenticate with GitHub via OAuth (PKCE)")
-  .action(() => {
-    console.log("login: not implemented yet");
+  .action(async () => {
+    const { loginCommand } = await import("./commands/login.js");
+    await loginCommand();
   });
 
 program

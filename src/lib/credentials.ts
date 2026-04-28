@@ -66,7 +66,7 @@ export async function clearCredentials(): Promise<void> {
     await unlink(CREDENTIALS_FILE);
   } catch (err) {
     if (isNodeError(err) && err.code === "ENOENT") {
-      return; // already gone, fine
+      return;
     }
     throw new ConfigError(
       `Could not delete credentials file: ${(err as Error).message}`,
